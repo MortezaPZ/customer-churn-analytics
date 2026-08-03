@@ -1,0 +1,85 @@
+<header class="masthead">
+  <div>
+    <h1>Customer Churn Analytics</h1>
+    <p class="masthead__sub">
+      Upload a customer file, train a model, and see who is about to leave — and why.
+    </p>
+  </div>
+  <button type="button" class="theme" (click)="toggleTheme()">
+    {{ theme() === 'light' ? 'Dark' : 'Light' }} mode
+  </button>
+</header>
+
+<section class="card controls">
+  <app-upload-panel
+    [datasets]="datasets()"
+    [busy]="busy()"
+    [error]="error()"
+    (upload)="onUpload($event)"
+    (train)="onTrain($event)"
+  />
+</section>
+
+@if (hasRun()) {
+  <section class="tiles">
+    <app-stat-tile
+      label="ROC-AUC"
+      [value]="decimal(run()!.roc_auc)"
+      caption="0.5 = coin flip"
+    />
+    <app-stat-tile label="Accuracy" [value]="percent(run()!.accuracy)" />
+    <app-stat-tile
+      label="Recall"
+      [value]="percent(run()!.recall)"
+      [caption]="recallCaption()"
+    />
+    <app-stat-tile
+      label="Precision"
+      [value]="percent(run()!.precision)"
+      caption="of flagged, actually left"
+    />
+    <app-stat-tile
+      label="At risk"
+      [value]="(segments()?.at_risk ?? 0).toString()"
+      [caption]="'of ' + (segments()?.total_customers ?? 0) + ' customers'"
+    />
+  </section>
+
+  <p class="context">
+    <strong>{{ run()!.algorithm_label }}</strong> trained on
+    <strong>{{ run()!.dataset_name }}</strong> in {{ run()!.training_seconds }}s.
+    Metrics are from a held-out 25% of the data the model never saw.
+  </p>
+
+  <section class="grid">
+    <div class="card">
+      <app-feature-importance-chart [features]="run()!.feature_importances" />
+    </div>
+    <div class="card">
+      <app-risk-segments [report]="segments()" />
+    </div>
+    <div class="card">
+      <app-roc-curve-chart
+        [fpr]="run()!.roc_curve.fpr ?? []"
+        [tpr]="run()!.roc_curve.tpr ?? []"
+        [auc]="run()!.roc_auc"
+      />
+    </div>
+    <div class="card">
+      <app-confusion-matrix [matrix]="run()!.confusion_matrix" />
+    </div>
+  </section>
+
+  <section class="card">
+    <app-predictions-table [rows]="predictions()" />
+  </section>
+} @else if (!busy()) {
+  <section class="card empty-state">
+    <h2>No model trained yet</h2>
+    <p>
+      Upload a CSV with a churn column, or pick an existing dataset above, then hit
+      <strong>Train model</strong>. The sample file lives in
+      <code>backend/sample_data/customer_churn.csv</code>.
+    </p>
+  </section>
+}

@@ -1,0 +1,150 @@
+/* Design tokens. Light values are the default; the dark column is a selected
+   set stepped for the dark surface, not an automatic inversion. */
+:root {
+  color-scheme: light;
+
+  --surface-1: #fcfcfb;
+  --page-plane: #f9f9f7;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --gridline: #e1e0d9;
+  --baseline: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.1);
+
+  /* Single-series charts use categorical slot 1. */
+  --series-1: #2a78d6;
+
+  /* Sequential blue ramp, light -> dark (used by the confusion matrix). */
+  --seq-100: #cde2fb;
+  --seq-250: #86b6ef;
+  --seq-400: #3987e5;
+  --seq-550: #1c5cab;
+  --seq-700: #0d366b;
+
+  /* Ink that stays legible on each ramp step. The ramp runs light->dark here,
+     so the deep steps take light ink. */
+  --ink-on-seq-100: #0b0b0b;
+  --ink-on-seq-250: #0b0b0b;
+  --ink-on-seq-400: #ffffff;
+  --ink-on-seq-550: #ffffff;
+  --ink-on-seq-700: #ffffff;
+
+  /* Status palette: fixed, never themed, never reused as a series color. */
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-critical: #d03b3b;
+
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(11, 11, 11, 0.06), 0 4px 12px rgba(11, 11, 11, 0.04);
+  --font: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@mixin dark-tokens {
+  color-scheme: dark;
+
+  --surface-1: #1a1a19;
+  --page-plane: #0d0d0d;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --gridline: #2c2c2a;
+  --baseline: #383835;
+  --border: rgba(255, 255, 255, 0.1);
+
+  --series-1: #3987e5;
+
+  --seq-100: #0d366b;
+  --seq-250: #184f95;
+  --seq-400: #2a78d6;
+  --seq-550: #5598e7;
+  --seq-700: #9ec5f4;
+
+  /* On the dark surface the ramp runs dark->light, so the ink flips with it:
+     the deep steps now take light ink and the pale steps take dark ink. */
+  --ink-on-seq-100: #ffffff;
+  --ink-on-seq-250: #ffffff;
+  --ink-on-seq-400: #ffffff;
+  --ink-on-seq-550: #0b0b0b;
+  --ink-on-seq-700: #0b0b0b;
+
+  --shadow: none;
+}
+
+/* OS preference, unless the viewer has explicitly stamped light. */
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme='light'])) {
+    @include dark-tokens;
+  }
+}
+
+/* The in-app toggle wins in both directions. */
+:root[data-theme='dark'] {
+  @include dark-tokens;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--page-plane);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Columns of numbers must line up; standalone figures should not be forced to. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.card__title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.card__subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
