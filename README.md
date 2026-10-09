@@ -1,79 +1,67 @@
-# داشبورد پیش‌بینی و تحلیل ریزش مشتری (Customer Churn Analytics)
+# Customer Churn Analytics
 
-*Upload a customer CSV, train a churn model, and get an explainable dashboard — who is about to leave and why, not just an accuracy number. Django REST + scikit-learn backend, Angular frontend. See below for the Persian write-up.*
+Upload a customer CSV, train a churn model, and see who is likely to leave and which fields drove that score.
 
-یک فایل CSV از مشتری‌ها آپلود کن، روی آن یک مدل ریزش (churn) آموزش بده، و یک
-داشبورد بگیر که می‌گوید **چه کسی در حال رفتن است و چرا** — نه فقط یک عدد
-accuracy.
+## Overview
 
-ساخته‌شده با **Django REST Framework + scikit-learn** در بک‌اند و **Angular**
-در فرانت‌اند.
+The backend profiles the file before training, fits one of three scikit-learn models, and returns risk segments plus permutation importance on the original columns. The Angular dashboard is for acting on that list, not for staring at a single accuracy number.
 
----
+## Features
 
-## چه کاری انجام می‌دهد
+- CSV upload with a column profile: row count, types, missing values, and class balance
+- Training with gradient boosting, random forest, or logistic regression
+- The same sklearn `Pipeline` is used at score time, so encoding and scaling are not reimplemented in the view
+- Permutation importance on the original fields, so `Contract` stays one factor instead of three one-hot pieces
+- High, medium, and low risk segments, and an export of the highest-risk customers
+- Files that cannot be trained are rejected with a reason: one class, fewer than 50 rows, or labels that cannot be parsed
 
-۱. **آپلود** یک CSV مشتری. API آن را پروفایل می‌کند — تعداد سطرها، نوع
-   ستون‌ها، مقادیر گم‌شده، توازن کلاس — و قبل از این‌که وقت تلف کنی می‌گوید
-   فایل قابل آموزش هست یا نه.
-۲. **آموزش** یک مدل (Gradient Boosting، Random Forest یا Logistic Regression).
-   کدگذاری دسته‌ای، پرکردن مقادیر گم‌شده و مقیاس‌دهی توسط یک `Pipeline` از
-   sklearn انجام می‌شود، پس همان تبدیل‌ها هنگام نمره‌دهی هم اعمال می‌شوند.
-۳. **توضیح** نتیجه. اهمیت جایگشتی (permutation importance) روی ستون‌های
-   اصلی محاسبه می‌شود، پس `Contract` به‌عنوان یک عامل رتبه‌بندی‌شده دیده
-   می‌شود، نه سه تکه‌ی one-hot جدا.
-۴. **اقدام** روی نتیجه. مشتری‌ها در سطح ریسک بالا/متوسط/پایین دسته‌بندی
-   می‌شوند و فهرست پرریسک‌ترین‌ها برای یک کمپین حفظ مشتری قابل خروجی‌گرفتن است.
+## Technology Stack
 
----
+- Python, Django REST Framework, scikit-learn
+- Angular
+- SQLite for the app database
 
-## نتایج اندازه‌گیری‌شده
+## Architecture
 
-روی مجموعه‌داده‌ی نمونه‌ی همراه پروژه (۳۰۰۰ سطر، نرخ ریزش ۲۴٫۴٪)، معیارهای
-هولدآوت از یک تقسیم لایه‌ای ۷۵/۲۵:
+`churn/ml.py` does not know about HTTP. `views.py` does not know sklearn internals. Swapping the model code does not require an API change.
 
-| مدل | ROC-AUC | صحت | دقت | فراخوانی | F1 | زمان آموزش |
-|---|---|---|---|---|---|---|
-| Logistic Regression | **۰٫۸۲۶** | ۰٫۷۲۹ | ۰٫۴۶۹ | ۰٫۸۲۰ | ۰٫۵۹۶ | ۰٫۳ ثانیه |
-| Gradient Boosting | ۰٫۸۱۶ | ۰٫۷۹۲ | ۰٫۶۴۸ | ۰٫۳۲۲ | ۰٫۴۳۱ | ۴٫۶ ثانیه |
-| Random Forest | ۰٫۸۱۱ | ۰٫۷۷۱ | ۰٫۵۲۴ | ۰٫۶۶۷ | ۰٫۵۸۷ | ۴٫۳ ثانیه |
+Identifier-like columns such as `customerID` and `email` are dropped. Free-text columns with more than 50 distinct values are dropped. Rare categories are grouped with `min_frequency`. Missing numbers use the median. Missing categories use the most frequent value. Non-UTF-8 uploads fall back to Latin-1.
 
-این اعداد در همان بازه‌ی benchmark‌های منتشرشده روی داده‌ی واقعی ریزش
-مخابراتی هستند (معمولاً ۰٫۸۰ تا ۰٫۸۵ ROC-AUC) — و همین هدف است: تولیدکننده‌ی
-داده‌ی نمونه طوری تنظیم شده که یک مسئله‌ی واقع‌بینانه‌ی *سخت* بسازد، نه یک
-مسئله‌ی ساده و چشم‌نواز.
+## Measured results
 
-جدول یک trade-off را نشان می‌دهد: gradient boosting بهترین دقت را دارد ولی
-فقط یک‌سوم ریزش‌کننده‌ها را پیدا می‌کند، درحالی‌که logistic regression ۸۲٪
-آن‌ها را می‌گیرد به قیمت هشدارهای اشتباه بیشتر. **برای یک کمپین حفظ مشتری،
-فراخوانی معمولاً از دقت باارزش‌تر است** — از‌دست‌دادن یک مشتری در حال رفتن
-هزینه‌ی یک اشتراک کامل دارد، درحالی‌که یک تخفیف هدررفته هزینه‌ی ناچیزی دارد.
-داشبورد هر سه مدل را نشان می‌دهد تا این تصمیم دست کسب‌وکار باشد، نه مدل.
+Holdout metrics on the bundled sample, 3000 rows, 24.4 percent churn, stratified 75/25 split:
 
-مهم‌ترین عوامل ریزش که مدل پیدا کرده: `Contract`، `Tenure`،
-`MonthlyCharges`، `TechSupport`، `LatePayments`، `PaymentMethod`.
+| Model | ROC-AUC | Accuracy | Precision | Recall | F1 | Train time |
+| --- | --- | --- | --- | --- | --- | --- |
+| Logistic regression | 0.826 | 0.729 | 0.469 | 0.820 | 0.596 | 0.3 s |
+| Gradient boosting | 0.816 | 0.792 | 0.648 | 0.322 | 0.431 | 4.6 s |
+| Random forest | 0.811 | 0.771 | 0.524 | 0.667 | 0.587 | 4.3 s |
 
----
+Gradient boosting is the most precise and finds about a third of the churners. Logistic regression finds 82 percent of them and raises more false alarms. For a retention campaign, recall is usually the more expensive one to miss. The dashboard shows all three models.
 
-## شروع سریع
+Top factors on this sample: `Contract`, `Tenure`, `MonthlyCharges`, `TechSupport`, `LatePayments`, `PaymentMethod`.
 
-### بک‌اند
+## Installation
+
+Backend:
 
 ```bash
 cd backend
 python -m venv ../.venv
-../.venv/Scripts/activate        # Windows؛  source ../.venv/bin/activate در Linux/macOS
-pip install -r requirements.txt
+```
 
+Windows: `../.venv/Scripts/activate`. Linux or macOS: `source ../.venv/bin/activate`.
+
+```bash
+pip install -r requirements.txt
 python manage.py migrate
-python manage.py generate_sample_data --rows 3000    # می‌نویسد در sample_data/customer_churn.csv
+python manage.py generate_sample_data --rows 3000
 python manage.py runserver
 ```
 
-API روی `http://localhost:8000/api/` بالا می‌آید — با رابط قابل‌مرور DRF
-همراه است، پس هر endpoint زیر مستقیم در مرورگر قابل‌کلیک‌کردن است.
+The API is at `http://localhost:8000/api/`.
 
-### فرانت‌اند
+Frontend:
 
 ```bash
 cd frontend
@@ -81,37 +69,25 @@ npm install
 npm start
 ```
 
-داشبورد روی `http://localhost:4200` است.
+The dashboard is at `http://localhost:4200`.
 
-### آزمون‌ها
+## Usage
 
-```bash
-cd backend
-python manage.py test churn
-```
+The target column accepts `Yes`/`No`, `1`/`0`, `true`/`false`, and `churned`/`active`. Send its name as `target_column`.
 
-۱۹ آزمون که تبدیل ستون هدف، انتخاب ویژگی، تضمین‌های آموزش، و همه‌ی
-endpointها شامل مسیرهای خطا را پوشش می‌دهند.
-
----
-
-## API
-
-| متد | مسیر | هدف |
-|---|---|---|
-| `POST` | `/api/datasets/upload/` | آپلود CSV (multipart: `file`, `target_column`) |
-| `GET` | `/api/datasets/` | فهرست مجموعه‌داده‌های آپلودشده |
-| `GET` | `/api/datasets/{id}/` | جزئیات مجموعه‌داده با پروفایل کامل ستون‌ها |
-| `GET` | `/api/datasets/{id}/preview/` | ۲۰ سطر اول فایل خام |
-| `POST` | `/api/datasets/{id}/train/` | آموزش مدل (`{"algorithm": "random_forest"}`) |
-| `GET` | `/api/runs/` | فهرست اجراهای آموزش (فیلتر با `?dataset=1`) |
-| `GET` | `/api/runs/{id}/` | معیارها، ماتریس درهم‌ریختگی، منحنی ROC، اهمیت‌ها |
-| `GET` | `/api/runs/{id}/segments/` | تفکیک سطح ریسک روی همه‌ی مشتری‌ها |
-| `GET` | `/api/runs/{id}/predictions/` | پرریسک‌ترین مشتری‌ها (`?limit=50`) |
-| `POST` | `/api/runs/{id}/predict/` | نمره‌دهی رکوردهای دلخواه (`{"records": [{...}]}`) |
-| `GET` | `/api/overview/` | شمارنده‌های اصلی داشبورد |
-
-### نمونه
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/datasets/upload/` | Upload a CSV (`file`, `target_column`) |
+| `GET` | `/api/datasets/` | List datasets |
+| `GET` | `/api/datasets/{id}/` | Dataset detail and column profile |
+| `GET` | `/api/datasets/{id}/preview/` | First 20 raw rows |
+| `POST` | `/api/datasets/{id}/train/` | Train (`{"algorithm": "random_forest"}`) |
+| `GET` | `/api/runs/` | Training runs, optional `?dataset=1` |
+| `GET` | `/api/runs/{id}/` | Metrics, confusion matrix, ROC, importances |
+| `GET` | `/api/runs/{id}/segments/` | Risk bands |
+| `GET` | `/api/runs/{id}/predictions/` | Highest-risk customers (`?limit=50`) |
+| `POST` | `/api/runs/{id}/predict/` | Score records (`{"records": [{...}]}`) |
+| `GET` | `/api/overview/` | Dashboard counters |
 
 ```bash
 curl -F "file=@sample_data/customer_churn.csv" -F "target_column=Churn" \
@@ -120,60 +96,21 @@ curl -F "file=@sample_data/customer_churn.csv" -F "target_column=Churn" \
 curl -X POST -H "Content-Type: application/json" \
      -d '{"algorithm":"gradient_boosting"}' \
      http://localhost:8000/api/datasets/1/train/
-
-curl http://localhost:8000/api/runs/1/segments/
 ```
 
----
+## Testing
 
-## استفاده با داده‌ی خودت
-
-هر CSV کار می‌کند به شرطی که یک ستون نشان‌دهنده‌ی ریزش داشته باشد. نام ستون
-هدف انعطاف‌پذیر است — `Yes`/`No`، `1`/`0`، `true`/`false`،
-`churned`/`active` همه شناخته می‌شوند. نامش را هنگام آپلود به‌عنوان
-`target_column` بفرست.
-
-API خودش بخش‌های شلوغ خروجی‌های واقعی را مدیریت می‌کند:
-
-- **کدگذاری** — اگر UTF-8 نبود به Latin-1 برمی‌گردد، به‌جای خطادادن روی
-  فایل‌های خروجی‌گرفته‌شده از Excel.
-- **مقادیر گم‌شده** — پرکردن با میانه برای ستون‌های عددی، پرتکرارترین مقدار
-  برای دسته‌ای.
-- **ستون‌های شناسه** — `customerID`، `email` و مشابه‌ها تشخیص داده و حذف
-  می‌شوند، پس مدل نمی‌تواند با به‌خاطرسپردن شناسه‌ی سطرها تقلب کند.
-- **ستون‌های متن آزاد** — ستون‌های رشته‌ای با بیش از ۵۰ مقدار متمایز حذف
-  می‌شوند به‌جای این‌که به هزاران ویژگی one-hot منفجر شوند.
-- **دسته‌های کمیاب** — با `min_frequency` گروه‌بندی می‌شوند تا یک دسته که
-  فقط دوبار دیده شده، ویژگی جدا نشود.
-
-فایل‌هایی که واقعاً قابل آموزش نیستند با یک دلیل مشخص (هدف تک‌کلاسه، کمتر از
-۵۰ سطر، برچسب‌های غیرقابل‌پارس) رد می‌شوند، نه با یک stack trace.
-
----
-
-## ساختار پروژه
-
-```
-churn-analytics/
-├── backend/
-│   ├── config/              # تنظیمات Django, URLها
-│   ├── churn/
-│   │   ├── ml.py            # آموزش، نمره‌دهی، پروفایل‌سازی — همه‌ی منطق sklearn
-│   │   ├── models.py        # Dataset, TrainingRun
-│   │   ├── serializers.py   # اعتبارسنجی درخواست، شکل‌دهی پاسخ
-│   │   ├── views.py         # ویوست‌های DRF
-│   │   ├── tests.py         # ۱۹ آزمون
-│   │   └── management/commands/generate_sample_data.py
-│   └── requirements.txt
-└── frontend/                # داشبورد Angular
+```bash
+cd backend
+python manage.py test churn
 ```
 
-قاعده‌ی طراحی این است که `ml.py` چیزی از درخواست‌های Django نمی‌داند و
-`views.py` چیزی از جزئیات داخلی scikit-learn نمی‌داند. این باعث می‌شود منطق
-مدل به‌تنهایی قابل‌تست بماند و بدون دست‌زدن به سطح API قابل تعویض باشد.
+The suite covers target conversion, feature selection, training guarantees, and the API including error paths.
 
----
+## Limitations
 
-## مجوز
+The sample generator is tuned to a hard problem in the published telecom-churn range (about 0.80 to 0.85 ROC-AUC). It is not a claim about a specific production dataset. The frontend has no unit specs.
+
+## License
 
 MIT
