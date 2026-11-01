@@ -111,6 +111,11 @@ The suite covers target conversion, feature selection, training guarantees, and 
 
 The sample generator is tuned to a hard problem in the published telecom-churn range (about 0.80 to 0.85 ROC-AUC). It is not a claim about a specific production dataset. The frontend has no unit specs.
 
+## Folder guides
+
+- [`backend/`](<backend/README.md>)
+- [`frontend/`](<frontend/README.md>)
+
 ## License
 
 MIT
