@@ -1,59 +1,17 @@
-# Frontend
+# Customer Churn Dashboard
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.0.5.
+[Project overview](../README.md)
 
-## Development server
+This Angular dashboard uploads customer CSV data to the Django API and presents the resulting churn analysis: data quality, model scores, risk segments, feature importance, and customer-level predictions.
 
-To start a local development server, run:
+## Structure
 
-```bash
-ng serve
-```
+- [src/](<src/README.md>) contains the Angular application.
+- [public/](<public/README.md>) contains static browser assets.
+- Inside `src/app/`, [components/](<src/app/components/README.md>) renders charts, tables, and reusable panels; [core/](<src/app/core/README.md>) holds API access and data models; [pages/](<src/app/pages/README.md>) contains the dashboard screen.
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Run locally
 
-## Code scaffolding
+From this directory, run `npm ci` and then `npm start`. The development server opens at `http://localhost:4200`.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Run `npm test` for the configured Vitest suite and `npm run build` for a production build. The API contract used by the browser is centralized in `src/app/core/api.service.ts`.
